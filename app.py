@@ -88,7 +88,7 @@ st.markdown(
         box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
     }
     div[data-testid="stForm"] {
-        background-color: #2563eb;
+        background-color: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 2rem;
@@ -138,7 +138,7 @@ st.markdown(
     }
     .stButton>button {
         background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-        color: #2563eb;
+        color: #ffffff;
         font-weight: 600;
         font-size: 1rem;
         border-radius: 10px;
