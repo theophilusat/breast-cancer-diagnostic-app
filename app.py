@@ -524,17 +524,64 @@ with tab2:
 
                                 st.markdown("---")
 
-
-                        # ---------------------------------------------------------
+                                # ---------------------------------------------------------
                         # 5. COMPARATIVE PERFORMANCE ANALYSIS
                         # ---------------------------------------------------------
+                        st.markdown("---")
                         st.header("📊 Comparative Performance Analysis Across ML Models")
 
                         if len(results_list) > 0:
                             results_df = pd.DataFrame(results_list)
-                            st.dataframe(results_df.style.highlight_max(axis=0, color="#d4edda"))
+
+                            # Melt dataframe for Seaborn grouped barplot
+                            melted_df = results_df.melt(
+                                id_vars=["Model"],
+                                value_vars=["Accuracy", "Precision", "Recall", "F1-Score"],
+                                var_name="Metrics",
+                                value_name="Score"
+                            )
+
+                            sns.set_theme(style="whitegrid")
+                            fig_bar, ax = plt.subplots(figsize=(12, 5))
+
+                            bar_colors = ["#4c72b0", "#dd8452", "#55a868", "#c44e52"]
+
+                            sns.barplot(
+                                data=melted_df,
+                                x="Model",
+                                y="Score",
+                                hue="Metrics",
+                                palette=bar_colors,
+                                edgecolor="black",
+                                linewidth=1,
+                                ax=ax
+                            )
+
+                            # Annotate bars with score values above each bar
+                            for p in ax.patches:
+                                height = p.get_height()
+                                if not np.isnan(height) and height > 0:
+                                    ax.annotate(
+                                        f"{height:.2f}",
+                                        (p.get_x() + p.get_width() / 2.0, height),
+                                        ha="center",
+                                        va="bottom",
+                                        fontsize=8,
+                                        xytext=(0, 3),
+                                        textcoords="offset points"
+                                    )
+
+                            ax.set_title("Comparative Performance Analysis Across ML Models", fontsize=14, pad=15)
+                            ax.set_xlabel("Classifier Model", fontsize=11)
+                            ax.set_ylabel("Mean Score", fontsize=11)
+                            ax.set_ylim(0.0, 1.1)
+                            ax.legend(title="Metrics", loc="upper right")
+
+                            st.pyplot(fig_bar)
                         else:
-                            st.info("No comparison table available. Ensure your uploaded CSV contains both Benign (0) and Malignant (1) target records.")
+                            st.info("No comparative metrics available to display.")
+
+
                         # ---------------------------------------------------------
                         # 6. BEST FITTED MODEL SELECTION DISPLAY
                         # ---------------------------------------------------------
