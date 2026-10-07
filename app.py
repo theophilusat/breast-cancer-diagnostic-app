@@ -399,54 +399,38 @@ with tab2:
                         st.markdown("---")
                         st.header("📈 Pair Plot of Highly Correlated Features")
 
-                        # Standardize target values to 0 and 1
-                        y_raw = corr_df[target_col]
-                        if y_raw.dtype == object or isinstance(y_raw.iloc[0], str):
-                            y_clean = y_raw.astype(str).str.strip().str.lower().map({
-                                'benign': 0, '0': 0, '0.0': 0, 'negative': 0, 'no': 0, 'b': 0,
-                                'malignant': 1, '1': 1, '1.0': 1, 'positive': 1, 'yes': 1, 'm': 1
-                            })
+                        pair_cols = [
+                            "Breast_Right",
+                            "Tumor Size (cm)",
+                            "Inv-Nodes",
+                            "Age",
+                            "Metastasis",
+                            "Menopause",
+                            "Breast_Left",
+                            target_col
+                        ]
+
+                        # Keep only columns that exist in your DataFrame
+                        available_pair_cols = [c for c in pair_cols if c in corr_df.columns]
+
+                        if len(available_pair_cols) > 1:
+                            pair_df = corr_df[available_pair_cols].dropna().copy()
+                            pair_df[target_col] = pair_df[target_col].astype(int)
+
+                            custom_palette = {0: "#3e647d", 1: "#41ab79"}
+
+                            pair_fig = sns.pairplot(
+                                pair_df,
+                                hue=target_col,
+                                palette=custom_palette,
+                                diag_kind="kde",
+                                plot_kws={"alpha": 0.7, "s": 25},
+                                corner=False
+                            )
+                            pair_fig.fig.suptitle("Pair Plot of Highly Correlated Features by Diagnosis Result", y=1.02)
+                            st.pyplot(pair_fig)
                         else:
-                            y_clean = pd.to_numeric(y_raw, errors='coerce')
-
-                        df_work = corr_df.copy()
-                        df_work[target_col] = y_clean
-
-                        # Drop missing targets
-                        df_work = df_work.dropna(subset=[target_col])
-
-                        # Coerce numeric columns
-                        num_cols = []
-                        for col in df_work.columns:
-                            if col != target_col:
-                                df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
-                                if df_work[col].notna().sum() > 0:
-                                    num_cols.append(col)
-
-                        if len(num_cols) > 0 and len(df_work) > 0:
-                            # Calculate Pearson correlations
-                            corrs = df_work[num_cols].apply(lambda col: col.corr(df_work[target_col])).abs()
-                            top_features = corrs.dropna().sort_values(ascending=False).head(5).index.tolist()
-
-                            if len(top_features) > 0:
-                                pair_cols = top_features + [target_col]
-                                pair_df = df_work[pair_cols].dropna().copy()
-                                pair_df[target_col] = pair_df[target_col].astype(int)
-
-                                pair_fig = sns.pairplot(
-                                    pair_df,
-                                    hue=target_col,
-                                    palette={0: "#3e647d", 1: "#41ab79"},
-                                    diag_kind="kde",
-                                    corner=True
-                                )
-                                pair_fig.fig.suptitle("Pair Plot of Highly Correlated Features", y=1.02)
-                                st.pyplot(pair_fig)
-                            else:
-                                st.warning("Not enough numeric features with valid correlations to generate a Pair Plot.")
-                        else:
-                            st.warning("Insufficient numeric data found to generate pair plot.")
-
+                            st.warning("Not enough specified columns found to display the pair plot.")
 
                         # ---------------------------------------------------------
                         # 4. TRAIN AND EVALUATE 5 ML MODELS
