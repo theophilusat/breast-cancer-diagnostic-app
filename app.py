@@ -42,7 +42,7 @@ st.markdown(
     <style>
     .stApp {
         background-color: #2563eb;
-        color: ##2563eb;
+        color: #d97706;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     .header-banner {
