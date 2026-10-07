@@ -41,8 +41,8 @@ st.markdown(
     """
     <style>
     .stApp {
-        background-color: #ffffff;
-        color: #1f2937;
+        background-color: #2563eb;
+        color: ##2563eb;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     .header-banner {
@@ -52,17 +52,17 @@ st.markdown(
         box-shadow: 0 10px 20px rgba(220, 38, 38, 0.25);
         margin-bottom: 2rem;
         text-align: center;
-        color: #ffffff;
+        color: #2563eb;
     }
     .header-title {
-        color: #ffffff;
+        color: #2563eb;
         font-size: 2.5rem;
         font-weight: 800;
         margin-bottom: 0.5rem;
         letter-spacing: -0.025em;
     }
     .header-subtitle {
-        color: #fef2f2;
+        color: #2563eb;
         font-size: 1.05rem;
         font-weight: 500;
     }
@@ -71,12 +71,12 @@ st.markdown(
         background-color: #f8fafc;
         padding: 8px;
         border-radius: 12px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid ##2563eb;
     }
     .stTabs [data-baseweb="tab"] {
         height: 48px;
         border-radius: 8px;
-        color: #64748b;
+        color: #2563eb;
         font-weight: 600;
         border: none;
         padding: 0 20px;
@@ -84,11 +84,11 @@ st.markdown(
     }
     .stTabs [aria-selected="true"] {
         background-color: #dc2626 !important;
-        color: #ffffff !important;
+        color: #2563eb !important;
         box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
     }
     div[data-testid="stForm"] {
-        background-color: #ffffff;
+        background-color: #2563eb;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 2rem;
@@ -138,7 +138,7 @@ st.markdown(
     }
     .stButton>button {
         background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-        color: #ffffff;
+        color: #2563eb;
         font-weight: 600;
         font-size: 1rem;
         border-radius: 10px;
@@ -197,10 +197,10 @@ tab1, tab2, tab3 = st.tabs(
 plt.style.use("default")
 plt.rcParams.update(
     {
-        "figure.facecolor": "#ffffff",
-        "axes.facecolor": "#ffffff",
+        "figure.facecolor": "#2563eb",
+        "axes.facecolor": "#2563eb",
         "grid.color": "#f1f5f9",
-        "text.color": "#1f2937",
+        "text.color": "#2563eb",
         "axes.labelcolor": "#374151",
         "xtick.color": "#4b5563",
         "ytick.color": "#4b5563",
