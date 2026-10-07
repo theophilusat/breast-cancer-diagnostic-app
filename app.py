@@ -392,13 +392,35 @@ with tab2:
 
                         plt.tight_layout()
                         st.pyplot(fig_box)
-
-                       # ---------------------------------------------------------
+# ---------------------------------------------------------
                         # 3. SEABORN PAIR PLOT OF HIGHLY CORRELATED FEATURES
                         # ---------------------------------------------------------
                         st.markdown("---")
                         st.header("📈 Pair Plot of Highly Correlated Features")
 
+                        # Initialize df_work globally to ensure Section 4 can access it
+                        y_raw = corr_df[target_col]
+                        if y_raw.dtype == object or isinstance(y_raw.iloc[0], str):
+                            y_clean = y_raw.astype(str).str.strip().str.lower().map({
+                                'benign': 0, '0': 0, '0.0': 0, 'negative': 0, 'no': 0, 'b': 0,
+                                'malignant': 1, '1': 1, '1.0': 1, 'positive': 1, 'yes': 1, 'm': 1
+                            })
+                        else:
+                            y_clean = pd.to_numeric(y_raw, errors='coerce')
+
+                        df_work = corr_df.copy()
+                        df_work[target_col] = y_clean
+                        df_work = df_work.dropna(subset=[target_col])
+
+                        # Preprocess numeric columns
+                        num_cols = []
+                        for col in df_work.columns:
+                            if col != target_col:
+                                df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
+                                if df_work[col].notna().sum() > 0:
+                                    num_cols.append(col)
+
+                        # Pairplot display logic
                         pair_cols = [
                             "Breast_Right",
                             "Tumor Size (cm)",
@@ -409,12 +431,10 @@ with tab2:
                             "Breast_Left",
                             target_col
                         ]
-
-                        # Keep only columns that exist in your DataFrame
-                        available_pair_cols = [c for c in pair_cols if c in corr_df.columns]
+                        available_pair_cols = [c for c in pair_cols if c in df_work.columns]
 
                         if len(available_pair_cols) > 1:
-                            pair_df = corr_df[available_pair_cols].dropna().copy()
+                            pair_df = df_work[available_pair_cols].dropna().copy()
                             pair_df[target_col] = pair_df[target_col].astype(int)
 
                             custom_palette = {0: "#3e647d", 1: "#41ab79"}
@@ -431,6 +451,7 @@ with tab2:
                             st.pyplot(pair_fig)
                         else:
                             st.warning("Not enough specified columns found to display the pair plot.")
+
 
                         # ---------------------------------------------------------
                         # 4. TRAIN AND EVALUATE 5 ML MODELS
@@ -524,7 +545,8 @@ with tab2:
 
                                 st.markdown("---")
 
-                                # ---------------------------------------------------------
+
+                        # ---------------------------------------------------------
                         # 5. COMPARATIVE PERFORMANCE ANALYSIS
                         # ---------------------------------------------------------
                         st.markdown("---")
@@ -533,7 +555,6 @@ with tab2:
                         if len(results_list) > 0:
                             results_df = pd.DataFrame(results_list)
 
-                            # Melt dataframe for Seaborn grouped barplot
                             melted_df = results_df.melt(
                                 id_vars=["Model"],
                                 value_vars=["Accuracy", "Precision", "Recall", "F1-Score"],
@@ -557,7 +578,6 @@ with tab2:
                                 ax=ax
                             )
 
-                            # Annotate bars with score values above each bar
                             for p in ax.patches:
                                 height = p.get_height()
                                 if not np.isnan(height) and height > 0:
@@ -580,8 +600,6 @@ with tab2:
                             st.pyplot(fig_bar)
                         else:
                             st.info("No comparative metrics available to display.")
-
-
                         # ---------------------------------------------------------
                         # 6. BEST FITTED MODEL SELECTION DISPLAY
                         # ---------------------------------------------------------
