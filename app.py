@@ -399,18 +399,47 @@ with tab2:
                         st.markdown("---")
                         st.header("📈 Pair Plot of Highly Correlated Features")
 
-                        corrs = corr_df.corr()[target_col].abs().sort_values(ascending=False)
-                        top_features = corrs.index[1:7].tolist()
+                        # Clean DataFrame: ensure every selected column is strictly a 1D Series
+                        clean_df = pd.DataFrame()
+                        for col in corr_df.columns:
+                            col_data = corr_df[col]
+                            # Extract single vector if stored as a 2D array or object
+                            if isinstance(col_data, pd.DataFrame):
+                                col_data = col_data.iloc[:, 0]
+                            if hasattr(col_data, "values") and len(col_data.values.shape) > 1:
+                                col_data = pd.Series(col_data.values.ravel()[:len(corr_df)], index=corr_df.index)
+                            
+                            clean_df[col] = pd.to_numeric(col_data, errors='coerce')
 
-                        pair_df = corr_df[top_features + [target_col]].copy()
-                        pair_fig = sns.pairplot(
-                            pair_df,
-                            hue=target_col,
-                            palette={0: "#3e647d", 1: "#41ab79"},
-                            diag_kind="kde"
-                        )
-                        pair_fig.fig.suptitle("Pair Plot of Highly Correlated Features by Diagnosis Result", y=1.02)
-                        st.pyplot(pair_fig)
+                        clean_df = clean_df.dropna(how='all')
+
+                        if target_col in clean_df.columns:
+                            # Drop target to get correlations among numerical features
+                            feature_df = clean_df.drop(columns=[target_col])
+                            corrs = feature_df.apply(lambda col: col.corr(clean_df[target_col])).abs().sort_values(ascending=False)
+                            
+                            top_features = corrs.dropna().head(5).index.tolist()
+
+                            if top_features:
+                                pair_cols = top_features + [target_col]
+                                pair_df = clean_df[pair_cols].dropna().copy()
+                                
+                                # Ensure integer/categorical type for the hue variable
+                                pair_df[target_col] = pair_df[target_col].astype(int)
+
+                                pair_fig = sns.pairplot(
+                                    pair_df,
+                                    hue=target_col,
+                                    palette="coolwarm",
+                                    diag_kind="kde",
+                                    corner=True
+                                )
+                                pair_fig.fig.suptitle("Pair Plot of Highly Correlated Features", y=1.02)
+                                st.pyplot(pair_fig)
+                            else:
+                                st.warning("Not enough numeric features with valid correlations to generate a Pair Plot.")
+                        else:
+                            st.warning(f"Target column '{target_col}' not found in numerical dataset.")
 
                         # ---------------------------------------------------------
                         # 4. TRAIN AND EVALUATE 5 ML MODELS
