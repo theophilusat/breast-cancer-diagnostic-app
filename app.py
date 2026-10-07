@@ -433,88 +433,109 @@ with tab2:
                         # ---------------------------------------------------------
                         # 4. TRAIN AND EVALUATE 5 ML MODELS
                         # ---------------------------------------------------------
-                        y = corr_df[target_col].values
-                        X = corr_df.drop(columns=[target_col])
-
-                        X_train, X_test, y_train, y_test = train_test_split(
-                            X, y, test_size=0.2, random_state=42, stratify=y
-                        )
-
-                        scaler = StandardScaler()
-                        X_train_scaled = scaler.fit_transform(X_train)
-                        X_test_scaled = scaler.transform(X_test)
-
-                        models = {
-                            "Logistic Regression": (LogisticRegression(max_iter=1000, random_state=42), True),
-                            "Decision Tree": (DecisionTreeClassifier(random_state=42), False),
-                            "Random Forest": (RandomForestClassifier(n_estimators=100, random_state=42), False),
-                            "Support Vector Machine": (SVC(probability=True, random_state=42), True),
-                            "K-Nearest Neighbors": (KNeighborsClassifier(), True)
-                        }
-
-                        results_list = []
-
-                        # Display individual CM and ROC for each model
-                        st.markdown("---")
-                        st.header("🔍 Individual Model Performance Diagnostics (Confusion Matrices & ROC Curves)")
-
-                        for m_name, (m_obj, use_scaled) in models.items():
-                            X_tr = X_train_scaled if use_scaled else X_train
-                            X_te = X_test_scaled if use_scaled else X_test
-
-                            m_obj.fit(X_tr, y_train)
-                            y_pred = m_obj.predict(X_te)
-                            y_proba = m_obj.predict_proba(X_te)[:, 1] if hasattr(m_obj, "predict_proba") else y_pred
-
-                            acc = accuracy_score(y_test, y_pred)
-                            prec = precision_score(y_test, y_pred, zero_division=0)
-                            rec = recall_score(y_test, y_pred, zero_division=0)
-                            f1 = f1_score(y_test, y_pred, zero_division=0)
-                            roc_auc = roc_auc_score(y_test, y_proba)
-
-                            results_list.append({
-                                "Model": m_name,
-                                "Accuracy": acc,
-                                "Precision": prec,
-                                "Recall": rec,
-                                "F1-Score": f1,
-                                "ROC-AUC": roc_auc
+                        # Clean and map target column strictly to binary values (0 and 1)
+                        y_raw = corr_df[target_col]
+                        
+                        if y_raw.dtype == object or isinstance(y_raw.iloc[0], str):
+                            # Map strings if present (case-insensitive check)
+                            y = y_raw.astype(str).str.strip().str.lower().map({
+                                'benign': 0, '0': 0, '0.0': 0, 'negative': 0, 'no': 0,
+                                'malignant': 1, '1': 1, '1.0': 1, 'positive': 1, 'yes': 1
                             })
+                        else:
+                            y = pd.to_numeric(y_raw, errors='coerce')
 
-                            st.subheader(f"Model: {m_name}")
-                            col_cm, col_roc = st.columns(2)
+                        # Drop any unmapped target rows
+                        valid_mask = y.notna()
+                        y = y[valid_mask].astype(int).values
+                        X = corr_df.drop(columns=[target_col])[valid_mask]
 
-                            with col_cm:
-                                cm = confusion_matrix(y_test, y_pred)
-                                cm_perc = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis] * 100
-                                labels = np.array([
-                                    [f"{cm[0, 0]}\n({cm_perc[0, 0]:.1f}%)", f"{cm[0, 1]}\n({cm_perc[0, 1]:.1f}%)"],
-                                    [f"{cm[1, 0]}\n({cm_perc[1, 0]:.1f}%)", f"{cm[1, 1]}\n({cm_perc[1, 1]:.1f}%)"]
-                                ])
+                        # Check if dataset contains at least 2 distinct classes
+                        unique_classes = np.unique(y)
+                        if len(unique_classes) < 2:
+                            st.error(
+                                f"Unable to train models: The target column '{target_col}' "
+                                f"contains only 1 class ({unique_classes}). "
+                                "Please ensure your dataset contains both Benign (0) and Malignant (1) samples."
+                            )
+                        else:
+                            X_train, X_test, y_train, y_test = train_test_split(
+                                X, y, test_size=0.2, random_state=42, stratify=y
+                            )
 
-                                fig_cm, ax_cm = plt.subplots(figsize=(5, 4))
-                                sns.heatmap(cm, annot=labels, fmt="", cmap="coolwarm", cbar=True, ax=ax_cm)
-                                ax_cm.set_title(f"Confusion Matrix - {m_name}")
-                                ax_cm.set_xlabel("Predicted Label")
-                                ax_cm.set_ylabel("True Label")
-                                st.pyplot(fig_cm)
+                            scaler = StandardScaler()
+                            X_train_scaled = scaler.fit_transform(X_train)
+                            X_test_scaled = scaler.transform(X_test)
 
-                            with col_roc:
-                                fpr, tpr, _ = roc_curve(y_test, y_proba)
-                                fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4))
-                                ax_roc.plot(fpr, tpr, color="darkorange", lw=2, label=f"ROC curve (AUC = {roc_auc:.2f})")
-                                ax_roc.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--", label="Baseline")
-                                ax_roc.set_xlim([0.0, 1.0])
-                                ax_roc.set_ylim([0.0, 1.05])
-                                ax_roc.set_xlabel("False Positive Rate")
-                                ax_roc.set_ylabel("True Positive Rate")
-                                ax_roc.set_title(f"ROC Curve - {m_name}")
-                                ax_roc.legend(loc="lower right")
-                                ax_roc.grid(True, alpha=0.3)
-                                st.pyplot(fig_roc)
+                            models = {
+                                "Logistic Regression": (LogisticRegression(max_iter=1000, random_state=42), True),
+                                "Decision Tree": (DecisionTreeClassifier(random_state=42), False),
+                                "Random Forest": (RandomForestClassifier(n_estimators=100, random_state=42), False),
+                                "Support Vector Machine": (SVC(probability=True, random_state=42), True),
+                                "K-Nearest Neighbors": (KNeighborsClassifier(), True)
+                            }
+
+                            results_list = []
 
                             st.markdown("---")
+                            st.header("🔍 Individual Model Performance Diagnostics (Confusion Matrices & ROC Curves)")
 
+                            for m_name, (m_obj, use_scaled) in models.items():
+                                X_tr = X_train_scaled if use_scaled else X_train
+                                X_te = X_test_scaled if use_scaled else X_test
+
+                                m_obj.fit(X_tr, y_train)
+                                y_pred = m_obj.predict(X_te)
+                                y_proba = m_obj.predict_proba(X_te)[:, 1] if hasattr(m_obj, "predict_proba") else y_pred
+
+                                acc = accuracy_score(y_test, y_pred)
+                                prec = precision_score(y_test, y_pred, zero_division=0)
+                                rec = recall_score(y_test, y_pred, zero_division=0)
+                                f1 = f1_score(y_test, y_pred, zero_division=0)
+                                roc_auc = roc_auc_score(y_test, y_proba) if len(np.unique(y_test)) > 1 else 0.5
+
+                                results_list.append({
+                                    "Model": m_name,
+                                    "Accuracy": acc,
+                                    "Precision": prec,
+                                    "Recall": rec,
+                                    "F1-Score": f1,
+                                    "ROC-AUC": roc_auc
+                                })
+
+                                st.subheader(f"Model: {m_name}")
+                                col_cm, col_roc = st.columns(2)
+
+                                with col_cm:
+                                    cm = confusion_matrix(y_test, y_pred)
+                                    cm_perc = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis] * 100
+                                    labels = np.array([
+                                        [f"{cm[0, 0]}\n({cm_perc[0, 0]:.1f}%)", f"{cm[0, 1]}\n({cm_perc[0, 1]:.1f}%)"],
+                                        [f"{cm[1, 0]}\n({cm_perc[1, 0]:.1f}%)", f"{cm[1, 1]}\n({cm_perc[1, 1]:.1f}%)"]
+                                    ])
+
+                                    fig_cm, ax_cm = plt.subplots(figsize=(5, 4))
+                                    sns.heatmap(cm, annot=labels, fmt="", cmap="coolwarm", cbar=True, ax=ax_cm)
+                                    ax_cm.set_title(f"Confusion Matrix - {m_name}")
+                                    ax_cm.set_xlabel("Predicted Label")
+                                    ax_cm.set_ylabel("True Label")
+                                    st.pyplot(fig_cm)
+
+                                with col_roc:
+                                    fpr, tpr, _ = roc_curve(y_test, y_proba)
+                                    fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4))
+                                    ax_roc.plot(fpr, tpr, color="darkorange", lw=2, label=f"ROC curve (AUC = {roc_auc:.2f})")
+                                    ax_roc.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--", label="Baseline")
+                                    ax_roc.set_xlim([0.0, 1.0])
+                                    ax_roc.set_ylim([0.0, 1.05])
+                                    ax_roc.set_xlabel("False Positive Rate")
+                                    ax_roc.set_ylabel("True Positive Rate")
+                                    ax_roc.set_title(f"ROC Curve - {m_name}")
+                                    ax_roc.legend(loc="lower right")
+                                    ax_roc.grid(True, alpha=0.3)
+                                    st.pyplot(fig_roc)
+
+                                st.markdown("---")
                         # ---------------------------------------------------------
                         # 5. COMPARATIVE PERFORMANCE ANALYSIS BAR CHART
                         # ---------------------------------------------------------
