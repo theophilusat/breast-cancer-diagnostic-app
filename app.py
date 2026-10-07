@@ -41,7 +41,7 @@ st.markdown(
     """
     <style>
     .stApp {
-        background-color: #ffffff;
+        background-color: #1e293b;
         color: #ffffff;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
