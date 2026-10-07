@@ -399,18 +399,36 @@ with tab2:
                         st.markdown("---")
                         st.header("📈 Pair Plot of Highly Correlated Features")
 
-                        corrs = corr_df.corr()[target_col].abs().sort_values(ascending=False)
-                        top_features = corrs.index[1:7].tolist()
+                        # Select numeric columns and compute absolute correlations with target
+                        numeric_corr_df = corr_df.select_dtypes(include=[np.number]).copy()
+                        
+                        if target_col in numeric_corr_df.columns:
+                            corrs = numeric_corr_df.corr()[target_col].abs().sort_values(ascending=False)
+                            # Get top 5 correlated features excluding the target column itself
+                            top_features = [col for col in corrs.index if col != target_col][:5]
 
-                        pair_df = corr_df[top_features + [target_col]].copy()
-                        pair_fig = sns.pairplot(
-                            pair_df,
-                            hue=target_col,
-                            palette={0: "#3e647d", 1: "#41ab79"},
-                            diag_kind="kde"
-                        )
-                        pair_fig.fig.suptitle("Pair Plot of Highly Correlated Features by Diagnosis Result", y=1.02)
-                        st.pyplot(pair_fig)
+                            if top_features:
+                                pair_cols = top_features + [target_col]
+                                pair_df = numeric_corr_df[pair_cols].dropna().copy()
+                                
+                                # Ensure scalar values (1D series) for each column
+                                for col in pair_cols:
+                                    pair_df[col] = pd.to_numeric(pair_df[col], errors='coerce')
+                                pair_df = pair_df.dropna()
+
+                                pair_fig = sns.pairplot(
+                                    pair_df,
+                                    hue=target_col,
+                                    palette={0: "#3e647d", 1: "#41ab79"},
+                                    diag_kind="kde",
+                                    corner=True  # Optimization to reduce plot clutter and speed up rendering
+                                )
+                                pair_fig.fig.suptitle("Pair Plot of Highly Correlated Features by Diagnosis Result", y=1.02)
+                                st.pyplot(pair_fig)
+                            else:
+                                st.warning("Not enough numeric features available to generate a Pair Plot.")
+                        else:
+                            st.warning(f"Target column '{target_col}' not found in numeric features.")
 
                         # ---------------------------------------------------------
                         # 4. TRAIN AND EVALUATE 5 ML MODELS
