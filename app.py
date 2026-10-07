@@ -52,10 +52,10 @@ st.markdown(
         box-shadow: 0 10px 20px rgba(220, 38, 38, 0.25);
         margin-bottom: 2rem;
         text-align: center;
-        color: #2563eb;
+        color: #ffffff;
     }
     .header-title {
-        color: #2563eb;
+        color: #ffffff;
         font-size: 2.5rem;
         font-weight: 800;
         margin-bottom: 0.5rem;
