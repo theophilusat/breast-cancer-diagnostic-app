@@ -393,44 +393,50 @@ with tab2:
                         plt.tight_layout()
                         st.pyplot(fig_box)
 
-                        # ---------------------------------------------------------
+                       # ---------------------------------------------------------
                         # 3. SEABORN PAIR PLOT OF HIGHLY CORRELATED FEATURES
                         # ---------------------------------------------------------
                         st.markdown("---")
                         st.header("📈 Pair Plot of Highly Correlated Features")
 
-                        # Clean DataFrame: ensure every selected column is strictly a 1D Series
-                        clean_df = pd.DataFrame()
-                        for col in corr_df.columns:
-                            col_data = corr_df[col]
-                            # Extract single vector if stored as a 2D array or object
-                            if isinstance(col_data, pd.DataFrame):
-                                col_data = col_data.iloc[:, 0]
-                            if hasattr(col_data, "values") and len(col_data.values.shape) > 1:
-                                col_data = pd.Series(col_data.values.ravel()[:len(corr_df)], index=corr_df.index)
-                            
-                            clean_df[col] = pd.to_numeric(col_data, errors='coerce')
+                        # Standardize target values to 0 and 1
+                        y_raw = corr_df[target_col]
+                        if y_raw.dtype == object or isinstance(y_raw.iloc[0], str):
+                            y_clean = y_raw.astype(str).str.strip().str.lower().map({
+                                'benign': 0, '0': 0, '0.0': 0, 'negative': 0, 'no': 0, 'b': 0,
+                                'malignant': 1, '1': 1, '1.0': 1, 'positive': 1, 'yes': 1, 'm': 1
+                            })
+                        else:
+                            y_clean = pd.to_numeric(y_raw, errors='coerce')
 
-                        clean_df = clean_df.dropna(how='all')
+                        df_work = corr_df.copy()
+                        df_work[target_col] = y_clean
 
-                        if target_col in clean_df.columns:
-                            # Drop target to get correlations among numerical features
-                            feature_df = clean_df.drop(columns=[target_col])
-                            corrs = feature_df.apply(lambda col: col.corr(clean_df[target_col])).abs().sort_values(ascending=False)
-                            
-                            top_features = corrs.dropna().head(5).index.tolist()
+                        # Drop missing targets
+                        df_work = df_work.dropna(subset=[target_col])
 
-                            if top_features:
+                        # Coerce numeric columns
+                        num_cols = []
+                        for col in df_work.columns:
+                            if col != target_col:
+                                df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
+                                if df_work[col].notna().sum() > 0:
+                                    num_cols.append(col)
+
+                        if len(num_cols) > 0 and len(df_work) > 0:
+                            # Calculate Pearson correlations
+                            corrs = df_work[num_cols].apply(lambda col: col.corr(df_work[target_col])).abs()
+                            top_features = corrs.dropna().sort_values(ascending=False).head(5).index.tolist()
+
+                            if len(top_features) > 0:
                                 pair_cols = top_features + [target_col]
-                                pair_df = clean_df[pair_cols].dropna().copy()
-                                
-                                # Ensure integer/categorical type for the hue variable
+                                pair_df = df_work[pair_cols].dropna().copy()
                                 pair_df[target_col] = pair_df[target_col].astype(int)
 
                                 pair_fig = sns.pairplot(
                                     pair_df,
                                     hue=target_col,
-                                    palette="coolwarm",
+                                    palette={0: "#3e647d", 1: "#41ab79"},
                                     diag_kind="kde",
                                     corner=True
                                 )
@@ -439,133 +445,112 @@ with tab2:
                             else:
                                 st.warning("Not enough numeric features with valid correlations to generate a Pair Plot.")
                         else:
-                            st.warning(f"Target column '{target_col}' not found in numerical dataset.")
+                            st.warning("Insufficient numeric data found to generate pair plot.")
+
 
                         # ---------------------------------------------------------
                         # 4. TRAIN AND EVALUATE 5 ML MODELS
                         # ---------------------------------------------------------
-                        y = corr_df[target_col].values
-                        X = corr_df.drop(columns=[target_col])
-
-                        X_train, X_test, y_train, y_test = train_test_split(
-                            X, y, test_size=0.2, random_state=42, stratify=y
-                        )
-
-                        scaler = StandardScaler()
-                        X_train_scaled = scaler.fit_transform(X_train)
-                        X_test_scaled = scaler.transform(X_test)
-
-                        models = {
-                            "Logistic Regression": (LogisticRegression(max_iter=1000, random_state=42), True),
-                            "Decision Tree": (DecisionTreeClassifier(random_state=42), False),
-                            "Random Forest": (RandomForestClassifier(n_estimators=100, random_state=42), False),
-                            "Support Vector Machine": (SVC(probability=True, random_state=42), True),
-                            "K-Nearest Neighbors": (KNeighborsClassifier(), True)
-                        }
-
                         results_list = []
 
-                        # Display individual CM and ROC for each model
-                        st.markdown("---")
-                        st.header("🔍 Individual Model Performance Diagnostics (Confusion Matrices & ROC Curves)")
+                        X = df_work[num_cols].fillna(df_work[num_cols].mean())
+                        y = df_work[target_col].astype(int).values
 
-                        for m_name, (m_obj, use_scaled) in models.items():
-                            X_tr = X_train_scaled if use_scaled else X_train
-                            X_te = X_test_scaled if use_scaled else X_test
+                        unique_classes = np.unique(y)
 
-                            m_obj.fit(X_tr, y_train)
-                            y_pred = m_obj.predict(X_te)
-                            y_proba = m_obj.predict_proba(X_te)[:, 1] if hasattr(m_obj, "predict_proba") else y_pred
+                        if len(unique_classes) < 2:
+                            st.error(
+                                f"⚠️ Unable to train models: The target column '{target_col}' contains only 1 class ({unique_classes}). "
+                                "Please ensure your dataset contains both Benign (0) and Malignant (1) samples."
+                            )
+                        else:
+                            X_train, X_test, y_train, y_test = train_test_split(
+                                X, y, test_size=0.2, random_state=42, stratify=y
+                            )
 
-                            acc = accuracy_score(y_test, y_pred)
-                            prec = precision_score(y_test, y_pred, zero_division=0)
-                            rec = recall_score(y_test, y_pred, zero_division=0)
-                            f1 = f1_score(y_test, y_pred, zero_division=0)
-                            roc_auc = roc_auc_score(y_test, y_proba)
+                            scaler = StandardScaler()
+                            X_train_scaled = scaler.fit_transform(X_train)
+                            X_test_scaled = scaler.transform(X_test)
 
-                            results_list.append({
-                                "Model": m_name,
-                                "Accuracy": acc,
-                                "Precision": prec,
-                                "Recall": rec,
-                                "F1-Score": f1,
-                                "ROC-AUC": roc_auc
-                            })
-
-                            st.subheader(f"Model: {m_name}")
-                            col_cm, col_roc = st.columns(2)
-
-                            with col_cm:
-                                cm = confusion_matrix(y_test, y_pred)
-                                cm_perc = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis] * 100
-                                labels = np.array([
-                                    [f"{cm[0, 0]}\n({cm_perc[0, 0]:.1f}%)", f"{cm[0, 1]}\n({cm_perc[0, 1]:.1f}%)"],
-                                    [f"{cm[1, 0]}\n({cm_perc[1, 0]:.1f}%)", f"{cm[1, 1]}\n({cm_perc[1, 1]:.1f}%)"]
-                                ])
-
-                                fig_cm, ax_cm = plt.subplots(figsize=(5, 4))
-                                sns.heatmap(cm, annot=labels, fmt="", cmap="coolwarm", cbar=True, ax=ax_cm)
-                                ax_cm.set_title(f"Confusion Matrix - {m_name}")
-                                ax_cm.set_xlabel("Predicted Label")
-                                ax_cm.set_ylabel("True Label")
-                                st.pyplot(fig_cm)
-
-                            with col_roc:
-                                fpr, tpr, _ = roc_curve(y_test, y_proba)
-                                fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4))
-                                ax_roc.plot(fpr, tpr, color="darkorange", lw=2, label=f"ROC curve (AUC = {roc_auc:.2f})")
-                                ax_roc.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--", label="Baseline")
-                                ax_roc.set_xlim([0.0, 1.0])
-                                ax_roc.set_ylim([0.0, 1.05])
-                                ax_roc.set_xlabel("False Positive Rate")
-                                ax_roc.set_ylabel("True Positive Rate")
-                                ax_roc.set_title(f"ROC Curve - {m_name}")
-                                ax_roc.legend(loc="lower right")
-                                ax_roc.grid(True, alpha=0.3)
-                                st.pyplot(fig_roc)
+                            models = {
+                                "Logistic Regression": (LogisticRegression(max_iter=1000, random_state=42), True),
+                                "Decision Tree": (DecisionTreeClassifier(random_state=42), False),
+                                "Random Forest": (RandomForestClassifier(n_estimators=100, random_state=42), False),
+                                "Support Vector Machine": (SVC(probability=True, random_state=42), True),
+                                "K-Nearest Neighbors": (KNeighborsClassifier(), True)
+                            }
 
                             st.markdown("---")
+                            st.header("🔍 Individual Model Performance Diagnostics (Confusion Matrices & ROC Curves)")
+
+                            for m_name, (m_obj, use_scaled) in models.items():
+                                X_tr = X_train_scaled if use_scaled else X_train
+                                X_te = X_test_scaled if use_scaled else X_test
+
+                                m_obj.fit(X_tr, y_train)
+                                y_pred = m_obj.predict(X_te)
+                                y_proba = m_obj.predict_proba(X_te)[:, 1] if hasattr(m_obj, "predict_proba") else y_pred
+
+                                acc = accuracy_score(y_test, y_pred)
+                                prec = precision_score(y_test, y_pred, zero_division=0)
+                                rec = recall_score(y_test, y_pred, zero_division=0)
+                                f1 = f1_score(y_test, y_pred, zero_division=0)
+                                roc_auc = roc_auc_score(y_test, y_proba) if len(np.unique(y_test)) > 1 else 0.5
+
+                                results_list.append({
+                                    "Model": m_name,
+                                    "Accuracy": acc,
+                                    "Precision": prec,
+                                    "Recall": rec,
+                                    "F1-Score": f1,
+                                    "ROC-AUC": roc_auc
+                                })
+
+                                st.subheader(f"Model: {m_name}")
+                                col_cm, col_roc = st.columns(2)
+
+                                with col_cm:
+                                    cm = confusion_matrix(y_test, y_pred)
+                                    cm_perc = cm.astype("float") / (cm.sum(axis=1)[:, np.newaxis] + 1e-9) * 100
+                                    labels = np.array([
+                                        [f"{cm[0, 0]}\n({cm_perc[0, 0]:.1f}%)", f"{cm[0, 1]}\n({cm_perc[0, 1]:.1f}%)"],
+                                        [f"{cm[1, 0]}\n({cm_perc[1, 0]:.1f}%)", f"{cm[1, 1]}\n({cm_perc[1, 1]:.1f}%)"]
+                                    ])
+
+                                    fig_cm, ax_cm = plt.subplots(figsize=(5, 4))
+                                    sns.heatmap(cm, annot=labels, fmt="", cmap="coolwarm", cbar=True, ax=ax_cm)
+                                    ax_cm.set_title(f"Confusion Matrix - {m_name}")
+                                    ax_cm.set_xlabel("Predicted Label")
+                                    ax_cm.set_ylabel("True Label")
+                                    st.pyplot(fig_cm)
+
+                                with col_roc:
+                                    fpr, tpr, _ = roc_curve(y_test, y_proba)
+                                    fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4))
+                                    ax_roc.plot(fpr, tpr, color="darkorange", lw=2, label=f"ROC curve (AUC = {roc_auc:.2f})")
+                                    ax_roc.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--", label="Baseline")
+                                    ax_roc.set_xlim([0.0, 1.0])
+                                    ax_roc.set_ylim([0.0, 1.05])
+                                    ax_roc.set_xlabel("False Positive Rate")
+                                    ax_roc.set_ylabel("True Positive Rate")
+                                    ax_roc.set_title(f"ROC Curve - {m_name}")
+                                    ax_roc.legend(loc="lower right")
+                                    ax_roc.grid(True, alpha=0.3)
+                                    st.pyplot(fig_roc)
+
+                                st.markdown("---")
+
 
                         # ---------------------------------------------------------
-                        # 5. COMPARATIVE PERFORMANCE ANALYSIS BAR CHART
+                        # 5. COMPARATIVE PERFORMANCE ANALYSIS
                         # ---------------------------------------------------------
                         st.header("📊 Comparative Performance Analysis Across ML Models")
 
-                        df_results = pd.DataFrame(results_list)
-                        df_melted = pd.melt(
-                            df_results,
-                            id_vars=["Model"],
-                            value_vars=["Accuracy", "Precision", "Recall", "F1-Score"],
-                            var_name="Metrics",
-                            value_name="Score"
-                        )
-
-                        fig_comp, ax_comp = plt.subplots(figsize=(12, 5.5))
-                        sns.barplot(
-                            data=df_melted,
-                            x="Model",
-                            y="Score",
-                            hue="Metrics",
-                            palette=["#4c72b0", "#dd8452", "#55a868", "#c44e52"],
-                            edgecolor="black",
-                            ax=ax_comp
-                        )
-                        ax_comp.set_ylim(0, 1.1)
-                        ax_comp.set_ylabel("Mean Score")
-                        ax_comp.set_xlabel("Classifier Model")
-                        ax_comp.set_title("Comparative Performance Analysis Across ML Models", fontsize=14, pad=10)
-
-                        for p in ax_comp.patches:
-                            height = p.get_height()
-                            if height > 0:
-                                ax_comp.annotate(
-                                    f"{height:.2f}",
-                                    (p.get_x() + p.get_width() / 2., height),
-                                    ha='center', va='bottom', fontsize=8, xytext=(0, 3), textcoords='offset points'
-                                )
-
-                        st.pyplot(fig_comp)
-
+                        if len(results_list) > 0:
+                            results_df = pd.DataFrame(results_list)
+                            st.dataframe(results_df.style.highlight_max(axis=0, color="#d4edda"))
+                        else:
+                            st.info("No comparison table available. Ensure your uploaded CSV contains both Benign (0) and Malignant (1) target records.")
                         # ---------------------------------------------------------
                         # 6. BEST FITTED MODEL SELECTION DISPLAY
                         # ---------------------------------------------------------
