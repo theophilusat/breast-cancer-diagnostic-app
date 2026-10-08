@@ -448,7 +448,7 @@ with tab2:
                     st.markdown("---")
                     st.header("📊 Feature Correlation Matrix")
 
-                    fig_corr, ax_corr = plt.subplots(figsize=(12, 8), facecolor="#ffffff")
+                    fig_corr, ax_corr = plt.subplots(figsize=(12, 8))
                     sns.heatmap(
                         corr_df.corr(),
                         annot=len(corr_df.columns) <= 15,
@@ -482,7 +482,7 @@ with tab2:
                         rows = (num_plots + cols_per_row - 1) // cols_per_row
 
                         fig_box, axes_box = plt.subplots(
-                            rows, cols_per_row, figsize=(16, rows * 3.5), facecolor="#ffffff")
+                            rows, cols_per_row, figsize=(16, rows * 3.5)
                         )
                         axes_box = (
                             axes_box.flatten()
@@ -666,7 +666,7 @@ with tab2:
 
                         with col_cm:
                             cm = confusion_matrix(y_test, y_pred)
-                            fig_cm, ax_cm = plt.subplots(figsize=(5, 4), facecolor="#ffffff"))
+                            fig_cm, ax_cm = plt.subplots(figsize=(5, 4))
                             sns.heatmap(
                                 cm,
                                 annot=True,
@@ -682,7 +682,7 @@ with tab2:
                             plt.close(fig_cm)
 
                         with col_roc:
-                            fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4), facecolor="#ffffff"))
+                            fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4))
                             if len(unique_classes) == 2 and y_proba is not None:
                                 fpr, tpr, _ = roc_curve(
                                     y_test, y_proba[:, 1]
@@ -747,7 +747,7 @@ with tab2:
                         value_name="Score",
                     )
 
-                    fig_comp, ax_comp = plt.subplots(figsize=(12, 5.5), facecolor="#ffffff"))
+                    fig_comp, ax_comp = plt.subplots(figsize=(12, 5.5))
                     sns.barplot(
                         data=df_melted,
                         x="Model",
