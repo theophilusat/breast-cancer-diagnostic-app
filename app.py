@@ -95,7 +95,7 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
     .diagnostic-card-benign {
-        background: #f8fafc;
+        background: #ffffff;
         border: 2px solid #94a3b8;
         border-radius: 16px;
         padding: 1.5rem;
@@ -138,7 +138,7 @@ st.markdown(
     }
     .stButton>button {
         background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-        color: #ffffff;
+        color: #green;
         font-weight: 600;
         font-size: 1rem;
         border-radius: 10px;
@@ -197,10 +197,10 @@ tab1, tab2, tab3 = st.tabs(
 plt.style.use("default")
 plt.rcParams.update(
     {
-        "figure.facecolor": "#2563eb",
-        "axes.facecolor": "#2563eb",
+        "figure.facecolor": "#ffffff",
+        "axes.facecolor": "#ffffff",
         "grid.color": "#f1f5f9",
-        "text.color": "#2563eb",
+        "text.color": "#1e293b",
         "axes.labelcolor": "#374151",
         "xtick.color": "#4b5563",
         "ytick.color": "#4b5563",
@@ -448,7 +448,7 @@ with tab2:
                     st.markdown("---")
                     st.header("📊 Feature Correlation Matrix")
 
-                    fig_corr, ax_corr = plt.subplots(figsize=(12, 8))
+                    fig_corr, ax_corr = plt.subplots(figsize=(12, 8), facecolor="#ffffff")
                     sns.heatmap(
                         corr_df.corr(),
                         annot=len(corr_df.columns) <= 15,
@@ -482,7 +482,7 @@ with tab2:
                         rows = (num_plots + cols_per_row - 1) // cols_per_row
 
                         fig_box, axes_box = plt.subplots(
-                            rows, cols_per_row, figsize=(16, rows * 3.5)
+                            rows, cols_per_row, figsize=(16, rows * 3.5), facecolor="#ffffff")
                         )
                         axes_box = (
                             axes_box.flatten()
@@ -666,7 +666,7 @@ with tab2:
 
                         with col_cm:
                             cm = confusion_matrix(y_test, y_pred)
-                            fig_cm, ax_cm = plt.subplots(figsize=(5, 4))
+                            fig_cm, ax_cm = plt.subplots(figsize=(5, 4), facecolor="#ffffff"))
                             sns.heatmap(
                                 cm,
                                 annot=True,
@@ -682,7 +682,7 @@ with tab2:
                             plt.close(fig_cm)
 
                         with col_roc:
-                            fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4))
+                            fig_roc, ax_roc = plt.subplots(figsize=(5.5, 4), facecolor="#ffffff"))
                             if len(unique_classes) == 2 and y_proba is not None:
                                 fpr, tpr, _ = roc_curve(
                                     y_test, y_proba[:, 1]
@@ -747,7 +747,7 @@ with tab2:
                         value_name="Score",
                     )
 
-                    fig_comp, ax_comp = plt.subplots(figsize=(12, 5.5))
+                    fig_comp, ax_comp = plt.subplots(figsize=(12, 5.5), facecolor="#ffffff"))
                     sns.barplot(
                         data=df_melted,
                         x="Model",
