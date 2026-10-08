@@ -62,21 +62,21 @@ st.markdown(
         letter-spacing: -0.025em;
     }
     .header-subtitle {
-        color: #2563eb;
+        color: #fef2f2;
         font-size: 1.05rem;
         font-weight: 500;
     }
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
-        background-color: #f8fafc;
+        background-color: #ffffff;
         padding: 8px;
         border-radius: 12px;
-        border: 1px solid ##2563eb;
+        border: 1px solid #e2e8f0;
     }
     .stTabs [data-baseweb="tab"] {
         height: 48px;
         border-radius: 8px;
-        color: #2563eb;
+        color: #475569;
         font-weight: 600;
         border: none;
         padding: 0 20px;
@@ -84,7 +84,7 @@ st.markdown(
     }
     .stTabs [aria-selected="true"] {
         background-color: #dc2626 !important;
-        color: #2563eb !important;
+        color: #ffffff !important;
         box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
     }
     div[data-testid="stForm"] {
