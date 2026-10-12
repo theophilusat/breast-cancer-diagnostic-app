@@ -452,7 +452,7 @@ with tab2:
                     fig_corr, ax_corr = plt.subplots(figsize=(12, 8))
                     sns.heatmap(
                         corr_df.corr(),
-                        annot=len(corr_df.columns) <= 15,
+                        annot=True,
                         fmt=".2f",
                         cmap="coolwarm",
                         vmin=-1.0,
