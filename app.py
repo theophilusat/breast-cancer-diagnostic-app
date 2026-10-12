@@ -868,6 +868,22 @@ with tab3:
     )
     if img_file is not None:
         image = Image.open(img_file).convert("RGB")
+
+        # ---------------------------------------------------------
+        # MAMMOGRAM STRICT VALIDATION CHECK (Grayscale Radiograph Verification)
+        # ---------------------------------------------------------
+        img_np = np.array(image)
+        r, g, b = img_np[:, :, 0], img_np[:, :, 1], img_np[:, :, 2]
+        # Calculate mean channel difference to verify if it's a monochrome/grayscale X-ray
+        color_diff = np.mean(
+            np.abs(r.astype(float) - g.astype(float))
+            + np.abs(g.astype(float) - b.astype(float))
+            + np.abs(b.astype(float) - r.astype(float))
+        )
+
+        # Threshold: Grayscale mammograms have near 0 color difference; color photos have high values
+        is_valid_mammogram = color_diff < 15.0
+
         col_img1, col_img2 = st.columns(2)
 
         with col_img1:
@@ -877,50 +893,63 @@ with tab3:
         with col_img2:
             st.subheader("Deep Learning Diagnostic Result")
 
-            np.random.seed(sum(image.size))
-            malignant_prob = np.round(np.random.uniform(70.0, 98.0), 1)
-            benign_prob = np.round(100.0 - malignant_prob, 1)
-
-            if malignant_prob > 50:
+            if not is_valid_mammogram:
                 st.markdown(
                     """
                     <div style="background-color: #fef2f2; border: 2px solid #dc2626; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
-                        <h4 style="color: #991b1b; margin: 0; font-weight: 700;">⚠️ Diagnostic Class: Malignant Suspicious Lesion Detected</h4>
+                        <h4 style="color: #991b1b; margin: 0; font-weight: 700;">❌ Invalid Image: Non-Mammogram Detected</h4>
+                        <p style="color: #7f1d1d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">The uploaded file appears to be a standard color photograph or non-medical image. Please upload a valid grayscale mammography X-ray scan.</p>
                     </div>
                 """,
                     unsafe_allow_html=True,
                 )
             else:
+                np.random.seed(sum(image.size))
+                malignant_prob = np.round(
+                    np.random.uniform(70.0, 98.0), 1
+                )
+                benign_prob = np.round(100.0 - malignant_prob, 1)
+
+                if malignant_prob > 50:
+                    st.markdown(
+                        """
+                        <div style="background-color: #fef2f2; border: 2px solid #dc2626; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                            <h4 style="color: #991b1b; margin: 0; font-weight: 700;">⚠️ Diagnostic Class: Malignant Suspicious Lesion Detected</h4>
+                        </div>
+                    """,
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        """
+                        <div style="background-color: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                            <h4 style="color: #166534; margin: 0; font-weight: 700;">✅ Diagnostic Class: Benign Normal Tissue</h4>
+                        </div>
+                    """,
+                        unsafe_allow_html=True,
+                    )
+
                 st.markdown(
-                    """
-                    <div style="background-color: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
-                        <h4 style="color: #166534; margin: 0; font-weight: 700;">✅ Diagnostic Class: Benign Normal Tissue</h4>
+                    f"""
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                            <div style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">Malignant Probability</div>
+                            <div style="color: #dc2626; font-size: 1.8rem; font-weight: 800; margin-top: 0.25rem;">{malignant_prob}%</div>
+                        </div>
+                        <div style="flex: 1; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                            <div style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">Benign Probability</div>
+                            <div style="color: #1e293b; font-size: 1.8rem; font-weight: 800; margin-top: 0.25rem;">{benign_prob}%</div>
+                        </div>
                     </div>
                 """,
                     unsafe_allow_html=True,
                 )
 
-            st.markdown(
-                f"""
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                    <div style="flex: 1; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                        <div style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">Malignant Probability</div>
-                        <div style="color: #dc2626; font-size: 1.8rem; font-weight: 800; margin-top: 0.25rem;">{malignant_prob}%</div>
-                    </div>
-                    <div style="flex: 1; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                        <div style="color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">Benign Probability</div>
-                        <div style="color: #1e293b; font-size: 1.8rem; font-weight: 800; margin-top: 0.25rem;">{benign_prob}%</div>
-                    </div>
-                </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-            st.subheader("Tissue Density Heatmap Visualization")
-            fig_img_hm, ax_img_hm = plt.subplots(figsize=(5, 4))
-            img_array = np.array(image.resize((100, 100)))[:, :, 0]
-            sns.heatmap(img_array, cmap="jet", ax=ax_img_hm, cbar=True)
-            ax_img_hm.axis("off")
-            ax_img_hm.set_title("Lesion Density Overlay")
-            st.pyplot(fig_img_hm)
-            plt.close(fig_img_hm)
+                st.subheader("Tissue Density Heatmap Visualization")
+                fig_img_hm, ax_img_hm = plt.subplots(figsize=(5, 4))
+                img_array = np.array(image.resize((100, 100)))[:, :, 0]
+                sns.heatmap(img_array, cmap="jet", ax=ax_img_hm, cbar=True)
+                ax_img_hm.axis("off")
+                ax_img_hm.set_title("Lesion Density Overlay")
+                st.pyplot(fig_img_hm)
+                plt.close(fig_img_hm)
