@@ -870,19 +870,28 @@ with tab3:
         image = Image.open(img_file).convert("RGB")
 
         # ---------------------------------------------------------
-        # MAMMOGRAM STRICT VALIDATION CHECK (Grayscale Radiograph Verification)
+        # STRICT MAMMOGRAM VALIDATION (X-Ray Radiograph Characteristics)
         # ---------------------------------------------------------
         img_np = np.array(image)
         r, g, b = img_np[:, :, 0], img_np[:, :, 1], img_np[:, :, 2]
-        # Calculate mean channel difference to verify if it's a monochrome/grayscale X-ray
+
+        # 1. Check color balance (must be monochrome/grayscale)
         color_diff = np.mean(
             np.abs(r.astype(float) - g.astype(float))
             + np.abs(g.astype(float) - b.astype(float))
             + np.abs(b.astype(float) - r.astype(float))
         )
+        is_grayscale = color_diff < 15.0
 
-        # Threshold: Grayscale mammograms have near 0 color difference; color photos have high values
-        is_valid_mammogram = color_diff < 15.0
+        # 2. Check X-ray background: Mammograms are dark medical scans (low average pixel brightness).
+        # Screenshots, white-background plots, and photos are bright (high average brightness).
+        mean_brightness = np.mean(img_np)
+        is_dark_radiograph = (
+            mean_brightness < 140.0
+        )  # Mammograms are predominantly dark
+
+        # Valid mammogram must be grayscale AND have a dark medical X-ray background
+        is_valid_mammogram = is_grayscale and is_dark_radiograph
 
         col_img1, col_img2 = st.columns(2)
 
@@ -897,8 +906,8 @@ with tab3:
                 st.markdown(
                     """
                     <div style="background-color: #fef2f2; border: 2px solid #dc2626; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
-                        <h4 style="color: #991b1b; margin: 0; font-weight: 700;">❌ Invalid Image: Non-Mammogram Detected</h4>
-                        <p style="color: #7f1d1d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">The uploaded file appears to be a standard color photograph or non-medical image. Please upload a valid grayscale mammography X-ray scan.</p>
+                        <h4 style="color: #991b1b; margin: 0; font-weight: 700;">❌ Invalid Image: Non-Mammogram or Plot Detected</h4>
+                        <p style="color: #7f1d1d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">The uploaded file appears to be a plot, screenshot, or bright image rather than a dark medical mammography X-ray scan. Please upload a valid mammogram radiograph.</p>
                     </div>
                 """,
                     unsafe_allow_html=True,
