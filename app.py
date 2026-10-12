@@ -830,10 +830,9 @@ with tab2:
                     st.header("🏆 Best Fitted Model Selection")
 
                     best_model_row = df_results.sort_values(
-                        by=["F1-Score", "Accuracy"], ascending=False
+                        by=["ROC-AUC", "F1-Score"], ascending=False
                     ).iloc[0]
                     best_model_name = best_model_row["Model"]
-
                     st.success(
                         f"**Recommended Best Model for Your Dataset:** `{best_model_name}`\n\n"
                         f"- **F1-Score:** `{best_model_row['F1-Score']:.4f}`\n"
