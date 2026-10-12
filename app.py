@@ -444,14 +444,25 @@ with tab2:
                     corr_df[target_col] = y
 
                     # ---------------------------------------------------------
-                    # 1. FEATURE CORRELATION MATRIX
+                    # 1. FEATURE CORRELATION MATRIX (Top Correlated Features)
                     # ---------------------------------------------------------
                     st.markdown("---")
-                    st.header("📊 Feature Correlation Matrix")
+                    st.header("📊 Feature Correlation Matrix (Top Correlated Features)")
 
-                    fig_corr, ax_corr = plt.subplots(figsize=(12, 8))
+                    # Automatically select up to 12 features most strongly correlated with the target
+                    n_features_to_show = min(12, len(corr_df.columns))
+                    top_corr_features = (
+                        corr_df.corr()[target_col]
+                        .abs()
+                        .sort_values(ascending=False)
+                        .head(n_features_to_show)
+                        .index
+                    )
+                    filtered_corr_df = corr_df[top_corr_features]
+
+                    fig_corr, ax_corr = plt.subplots(figsize=(10, 8))
                     sns.heatmap(
-                        corr_df.corr(),
+                        filtered_corr_df.corr(),
                         annot=True,
                         fmt=".2f",
                         cmap="coolwarm",
@@ -461,12 +472,12 @@ with tab2:
                         ax=ax_corr,
                     )
                     ax_corr.set_title(
-                        "Feature Correlation Matrix", fontsize=14, pad=12
+                        "Top Correlated Features Matrix", fontsize=14, pad=12
                     )
                     plt.xticks(rotation=90)
+                    plt.yticks(rotation=0)
                     st.pyplot(fig_corr)
                     plt.close(fig_corr)
-
                     # ---------------------------------------------------------
                     # 2. FEATURE DISTRIBUTIONS BY DIAGNOSIS (BOX PLOTS)
                     # ---------------------------------------------------------
