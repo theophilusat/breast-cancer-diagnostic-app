@@ -351,19 +351,56 @@ with tab1:
 with tab2:
     st.markdown("### 📁 Clinical Dataset Benchmark")
     st.write(
-        "Upload any CSV dataset containing patient records to make bulk predictions, generate charts, and identify the best-fitted model."
+        "Upload a validated breast cancer clinical dataset (.CSV) to make bulk predictions, generate charts, and identify the best-fitted model."
     )
 
     uploaded_file = st.file_uploader(
-        "Upload Patient Dataset (.CSV)", type=["csv"]
+        "Upload Breast Cancer Dataset (.CSV)", type=["csv"]
     )
 
     if uploaded_file is not None:
         try:
             raw_df = pd.read_csv(uploaded_file)
+
+            # ---------------------------------------------------------
+            # STRICT BREAST CANCER DATASET VALIDATION CHECK
+            # ---------------------------------------------------------
+            breast_cancer_keywords = [
+                "tumor",
+                "radius",
+                "texture",
+                "perimeter",
+                "smoothness",
+                "inv-nodes",
+                "metastasis",
+                "breast",
+                "malignant",
+                "benign",
+                "mean",
+                "area",
+                "concavity",
+                "symmetry",
+            ]
+            columns_lower = [str(c).lower() for c in raw_df.columns]
+            
+            # Check how many standard breast cancer feature keywords are present
+            keyword_matches = sum(
+                any(kw in col for col in columns_lower)
+                for kw in breast_cancer_keywords
+            )
+
+            # Require at least 2 matching breast cancer indicators to pass
+            if keyword_matches < 2:
+                st.error(
+                    "❌ **Invalid Dataset Error:** This application is strictly restricted to **Breast Cancer datasets only**. "
+                    "The uploaded file does not contain recognized breast cancer attributes (such as tumor size, radius, texture, inv-nodes, etc.). "
+                    "Please upload a valid breast cancer clinical or diagnostic dataset."
+                )
+                st.stop()
+
+            st.success("✅ Valid Breast Cancer Dataset Verified Successfully!")
             st.write("### Dataset Preview:")
             st.dataframe(raw_df.head())
-
             # ---------------------------------------------------------
             # GENERALIZED PREPROCESSING & TARGET SELECTION
             # ---------------------------------------------------------
