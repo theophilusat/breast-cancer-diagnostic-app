@@ -344,35 +344,7 @@ with tab1:
             res_col2.metric(
                 "Malignant Probability", f"{probabilities[1]*100:.1f}%"
             )
-# --- Place at the end of Tab 1 (inside `if submit_button:` block) ---
-st.markdown("---")
-# Create a text/JSON summary of the single patient result
-patient_report = f"""
-========================================
-SINGLE PATIENT CLINICAL DIAGNOSTIC REPORT
-========================================
-Age: {age}
-Tumor Size: {tumor_size} cm
-Involved Lymph Nodes: {inv_nodes}
-Metastasis: {'Present (1)' if metastasis == 1 else 'Absent (0)'}
-Family History: {'Positive (1)' if history == 1 else 'Negative (0)'}
-Menopause: {'Yes (1)' if menopause == 1 else 'No (0)'}
-Breast Anatomy: {breast_side}
-Anatomical Quadrant: {quadrant}
-----------------------------------------
-Predicted Diagnosis: {result_text}
-Confidence Score: {max(probabilities)*100:.1f}%
-Benign Probability: {probabilities[0]*100:.1f}%
-Malignant Probability: {probabilities[1]*100:.1f}%
-========================================
-"""
 
-st.download_button(
-    label="📥 Download Single Patient Report (.txt)",
-    data=patient_report,
-    file_name=f"patient_diagnostic_report_{result_text.lower()}.txt",
-    mime="text/plain",
-)
 # =========================================================
 # TAB 2: BATCH DATASET PREDICTION & MODEL COMPARISON
 # =========================================================
