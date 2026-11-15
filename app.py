@@ -218,7 +218,7 @@ try:
 except Exception:
     default_model, default_scaler, feature_cols = None, None, []
 
-# Application Navigation Tabs
+# Application Navigation Tabs (3 Tabs)
 tab1, tab2, tab3 = st.tabs(
     [
         "📋 Single Patient Diagnostic",
@@ -415,13 +415,11 @@ with tab2:
             ]
             columns_lower = [str(c).lower() for c in raw_df.columns]
             
-            # Check how many standard breast cancer feature keywords are present
             keyword_matches = sum(
                 any(kw in col for col in columns_lower)
                 for kw in breast_cancer_keywords
             )
 
-            # Require at least 2 matching breast cancer indicators to pass
             if keyword_matches < 2:
                 st.error(
                     "❌ **Invalid Dataset Error:** This application is strictly restricted to **Breast Cancer datasets only**. "
@@ -433,13 +431,10 @@ with tab2:
             st.success("✅ Valid Breast Cancer Dataset Verified Successfully!")
             st.write("### Dataset Preview:")
             st.dataframe(raw_df.head())
-            # ---------------------------------------------------------
-            # GENERALIZED PREPROCESSING & TARGET SELECTION
-            # ---------------------------------------------------------
+
             proc_df = raw_df.copy()
             proc_df.columns = proc_df.columns.str.strip()
 
-            # Identify candidate target columns
             potential_targets = [
                 c
                 for c in proc_df.columns
@@ -471,7 +466,6 @@ with tab2:
                     "Processing dataset, training ML models, and generating diagnostic charts..."
                 ):
 
-                    # Drop irrelevant IDs/Metadata dynamically
                     id_like_cols = [
                         c
                         for c in proc_df.columns
@@ -482,7 +476,6 @@ with tab2:
                         columns=id_like_cols, errors="ignore"
                     )
 
-                    # Encode Target Variable securely
                     y_raw = proc_df[target_col].dropna()
                     proc_df = proc_df.loc[y_raw.index]
 
@@ -496,29 +489,19 @@ with tab2:
                         )
                         st.stop()
 
-                    # Extract Feature Matrix (X) & Encode Categorical Variables
                     X_df = proc_df.drop(columns=[target_col])
-
-                    # Convert all object/string columns into numerical dummies
                     X_df = pd.get_dummies(X_df, drop_first=True, dtype=float)
-
-                    # Impute missing values
                     X_df = X_df.apply(pd.to_numeric, errors="coerce").fillna(
                         X_df.mean()
                     )
                     X_df = X_df.fillna(0)
 
-                    # Unified Numerical DataFrame for Analysis
                     corr_df = X_df.copy()
                     corr_df[target_col] = y
 
-                    # ---------------------------------------------------------
-                    # 1. FEATURE CORRELATION MATRIX (Top Correlated Features)
-                    # ---------------------------------------------------------
                     st.markdown("---")
                     st.header("📊 Feature Correlation Matrix (Top Correlated Features)")
 
-                    # Automatically select up to 12 features most strongly correlated with the target
                     n_features_to_show = min(12, len(corr_df.columns))
                     top_corr_features = (
                         corr_df.corr()[target_col]
@@ -547,9 +530,7 @@ with tab2:
                     plt.yticks(rotation=0)
                     st.pyplot(fig_corr)
                     plt.close(fig_corr)
-                    # ---------------------------------------------------------
-                    # 2. FEATURE DISTRIBUTIONS BY DIAGNOSIS (BOX PLOTS)
-                    # ---------------------------------------------------------
+
                     st.markdown("---")
                     st.header("📦 Feature Distributions by Diagnosis")
 
@@ -598,9 +579,6 @@ with tab2:
                         st.pyplot(fig_box)
                         plt.close(fig_box)
 
-                    # ---------------------------------------------------------
-                    # 3. PAIR PLOT OF HIGHLY CORRELATED FEATURES
-                    # ---------------------------------------------------------
                     st.markdown("---")
                     st.header("📈 Pair Plot of Highly Correlated Features")
 
@@ -625,9 +603,6 @@ with tab2:
                         )
                         st.pyplot(pair_fig)
 
-                    # ---------------------------------------------------------
-                    # 4. TRAIN AND EVALUATE ML MODELS
-                    # ---------------------------------------------------------
                     X = X_df.values
 
                     try:
@@ -713,7 +688,6 @@ with tab2:
                             zero_division=0,
                         )
 
-                        # Generic ROC-AUC Calculation
                         roc_auc = np.nan
                         if y_proba is not None:
                             try:
@@ -807,9 +781,6 @@ with tab2:
 
                         st.markdown("---")
 
-                    # ---------------------------------------------------------
-                    # 5. COMPARATIVE PERFORMANCE BAR CHART
-                    # ---------------------------------------------------------
                     st.header(
                         "📊 Comparative Performance Analysis Across ML Models"
                     )
@@ -855,9 +826,6 @@ with tab2:
                     st.pyplot(fig_comp)
                     plt.close(fig_comp)
 
-                    # ---------------------------------------------------------
-                    # 6. BEST FITTED MODEL SELECTION DISPLAY
-                    # ---------------------------------------------------------
                     st.markdown("---")
                     st.header("🏆 Best Fitted Model Selection")
 
@@ -875,3 +843,51 @@ with tab2:
                     )
         except Exception as e:
             st.error(f"Error processing file: {e}")
+
+# =========================================================
+# TAB 3: MAMMOGRAPHY IMAGE ANALYSIS
+# =========================================================
+with tab3:
+    st.subheader("🖼️ Mammogram Image Diagnostic Field")
+    st.write(
+        "Upload mammography scans (PNG/JPG/JPEG) to evaluate visual breast cancer diagnostics using Deep Learning visual inference."
+    )
+
+    img_file = st.file_uploader(
+        "Upload Mammogram Image", type=["png", "jpg", "jpeg", "jfif"]
+    )
+    if img_file is not None:
+        image = Image.open(img_file).convert("RGB")
+
+        # ---------------------------------------------------------
+        # STRICT MAMMOGRAM VALIDATION (X-Ray Radiograph Characteristics)
+        # ---------------------------------------------------------
+        img_np = np.array(image)
+        r, g, b = img_np[:, :, 0], img_np[:, :, 1], img_np[:, :, 2]
+
+        # 1. Check color balance (must be monochrome/grayscale)
+        color_diff = np.mean(
+            np.abs(r.astype(float) - g.astype(float))
+            + np.abs(g.astype(float) - b.astype(float))
+            + np.abs(b.astype(float) - r.astype(float))
+        )
+        is_grayscale = color_diff < 15.0
+
+        # 2. Check X-ray background: Mammograms are dark medical scans (low average pixel brightness).
+        mean_brightness = np.mean(img_np)
+        is_dark_radiograph = mean_brightness < 140.0
+
+        # Valid mammogram must be grayscale AND have a dark medical X-ray background
+        is_valid_mammogram = is_grayscale and is_dark_radiograph
+
+        col_img1, col_img2 = st.columns(2)
+
+        with col_img1:
+            st.subheader("Uploaded Mammogram Scan")
+            st.image(image, use_container_width=True)
+
+        with col_img2:
+            st.subheader("Deep Learning Diagnostic Result")
+
+            if not is_valid_mammogram:
+                st.markdown
